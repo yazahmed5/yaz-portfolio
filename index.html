@@ -279,18 +279,72 @@
     });
   });
 
-  /* ── Scroll Reveal ── */
+  /* ── Scroll Reveal + stat count-up ── */
   var els=document.querySelectorAll('.rv');
   if('IntersectionObserver' in window){
     var io=new IntersectionObserver(function(entries){
       entries.forEach(function(e){
-        if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}
+        if(e.isIntersecting){
+          e.target.classList.add('in');
+          /* Count-up for stat numbers */
+          var numEl=e.target.querySelector('.stat-num');
+          if(numEl && !numEl.dataset.counted){
+            numEl.dataset.counted='1';
+            var raw=numEl.textContent.trim();
+            var num=parseFloat(raw);
+            if(!isNaN(num)){
+              var suffix=raw.replace(String(num),'');
+              var start=0,dur=700,startTime=null;
+              function step(ts){
+                if(!startTime)startTime=ts;
+                var prog=Math.min((ts-startTime)/dur,1);
+                var ease=1-Math.pow(1-prog,3);
+                var cur=num<=10?+(start+(num-start)*ease).toFixed(1):Math.round(start+(num-start)*ease);
+                numEl.textContent=cur+suffix;
+                if(prog<1)requestAnimationFrame(step);
+              }
+              requestAnimationFrame(step);
+            }
+          }
+          io.unobserve(e.target);
+        }
       });
     },{threshold:0.07,rootMargin:'0px 0px -10px 0px'});
     els.forEach(function(el){io.observe(el)});
   } else {
     els.forEach(function(el){el.classList.add('in')});
   }
+
+  /* ── Staggered hero-tag letter animation ── */
+  var tag=document.querySelector('.hero-tag');
+  if(tag){
+    var txt=tag.textContent;
+    tag.innerHTML='';
+    txt.split('').forEach(function(ch,i){
+      var s=document.createElement('span');
+      s.textContent=ch==' '?' ':ch;
+      s.style.cssText='display:inline-block;opacity:0;transform:translateY(8px);transition:opacity .3s '+(0.04+i*0.02)+'s ease,transform .3s '+(0.04+i*0.02)+'s ease';
+      tag.appendChild(s);
+    });
+    setTimeout(function(){
+      tag.querySelectorAll('span').forEach(function(s){
+        s.style.opacity='1';s.style.transform='translateY(0)';
+      });
+    },80);
+  }
+
+  /* ── Project item ripple tap feedback (mobile) ── */
+  document.querySelectorAll('.project-item').forEach(function(item){
+    item.addEventListener('click',function(e){
+      var r=document.createElement('div');
+      var rect=item.getBoundingClientRect();
+      var size=60;
+      r.style.cssText='position:absolute;width:'+size+'px;height:'+size+'px;left:'+(e.clientX-rect.left-size/2)+'px;top:'+(e.clientY-rect.top-size/2)+'px;background:rgba(255,255,255,.08);border-radius:50%;transform:scale(0);transition:transform .5s ease,opacity .5s ease;pointer-events:none;z-index:0';
+      item.appendChild(r);
+      requestAnimationFrame(function(){r.style.transform='scale(4)';r.style.opacity='0'});
+      setTimeout(function(){r.remove()},600);
+    });
+  });
 
   /* ── Resume Modal — Blob URL ── */
   var modal=document.getElementById('resumeModal');
